@@ -1,6 +1,6 @@
 {
   "id": "community.claude-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -11,8 +11,8 @@
     "nl": "Claude MCP"
   },
   "description": {
-    "en": "Control your entire smart home from Claude, Cursor, or any AI agent — 83 tools for devices, flows, zones, energy, and more",
-    "nl": "Bedien je volledige smarthome vanuit Claude, Cursor of elke AI-agent — 83 tools voor apparaten, flows, zones, energie en meer"
+    "en": "Your Homey Pro, powered by AI.",
+    "nl": "Je Homey Pro, aangedreven door AI."
   },
   "tags": {
     "en": [

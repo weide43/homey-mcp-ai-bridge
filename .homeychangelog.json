@@ -7,5 +7,11 @@
   },
   "1.0.2": {
     "en": "Added Homey Pro 2026 to supported models list"
+  },
+  "1.1.0": {
+    "en": "Fixed app ID (removed homey from ID), English readme.txt, Dutch readme.nl.txt, new recognizable icon"
+  },
+  "1.2.0": {
+    "en": "Updated app description to a clean tagline, redesigned icon as a clear AI spark on transparent background, and replaced store images with a clean professional design."
   }
 }

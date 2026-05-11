@@ -20,3 +20,10 @@ coverage/
 # Development-only files
 settings/homey.js
 scripts/
+preview.html
+assets/images/_banner.html
+assets/images/banner.png
+assets/images/banner.svg
+assets/images/icon_preview.png
+assets/source-logo.jpg
+assets/source-logo.png

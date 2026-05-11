@@ -1,22 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Purple rounded background -->
-  <rect width="100" height="100" rx="20" fill="#5c35cc"/>
-
-  <!-- Three connected nodes representing MCP protocol (AI ↔ devices) -->
-
-  <!-- Connecting lines (drawn first, behind nodes) -->
-  <line x1="50" y1="30" x2="25" y2="70" stroke="white" stroke-width="4.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="50" y1="30" x2="75" y2="70" stroke="white" stroke-width="4.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="25" y1="70" x2="75" y2="70" stroke="white" stroke-width="4.5" stroke-linecap="round" opacity="0.6"/>
-
-  <!-- Top node (AI / Claude) -->
-  <circle cx="50" cy="30" r="11" fill="white"/>
-  <!-- Small spark inside top node -->
-  <circle cx="50" cy="30" r="5" fill="#5c35cc"/>
-
-  <!-- Bottom-left node (Homey device) -->
-  <circle cx="25" cy="70" r="9" fill="white"/>
-
-  <!-- Bottom-right node (Homey device) -->
-  <circle cx="75" cy="70" r="9" fill="white"/>
+  <!-- Transparent background: Homey applies brandColor (#5c35cc) automatically -->
+  <!-- Claude-style 4-pointed spark, clean and recognizable at small sizes -->
+  <path fill="white" d="M50 7
+    C50 7 53 28 62 38
+    C72 48 93 50 93 50
+    C93 50 72 52 62 62
+    C53 72 50 93 50 93
+    C50 93 47 72 38 62
+    C28 52 7 50 7 50
+    C7 50 28 48 38 38
+    C47 28 50 7 50 7 Z"/>
 </svg>
