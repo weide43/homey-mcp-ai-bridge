@@ -1,6 +1,6 @@
 {
   "name": "community.claude-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "MCP Server for Homey - Connect AI agents to your smart home",
   "main": "app.js",
   "scripts": {

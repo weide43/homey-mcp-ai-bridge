@@ -1,6 +1,6 @@
 {
   "id": "community.claude-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -72,15 +72,8 @@
       },
       {
         "method": "GET",
-        "path": "/savepat"
+        "path": "/token"
       }
     ]
   },
-  "contributing": {
-    "donate": {
-      "paypal": {
-        "username": ""
-      }
-    }
-  }
 }

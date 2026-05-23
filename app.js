@@ -143,7 +143,7 @@ class HomeyMcpApp extends Homey.App {
     return { success: true };
   }
 
-  async getSavepat({ homey, query }) {
+  async getToken({ homey, query }) {
     if (query.token !== undefined) {
       this.homey.settings.set('personal_access_token', query.token || '');
     }
