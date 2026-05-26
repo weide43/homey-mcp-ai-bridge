@@ -95,6 +95,10 @@
           "en": "The tool name !{{is|is not}} [[tool_name]]",
           "nl": "De toolnaam !{{is|is niet}} [[tool_name]]"
         },
+        "titleFormatted": {
+          "en": "The tool name !{{is|is not}} [[tool_name]]",
+          "nl": "De toolnaam !{{is|is niet}} [[tool_name]]"
+        },
         "args": [
           {
             "name": "tool_name",
