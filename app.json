@@ -1,6 +1,6 @@
 {
   "id": "community.mcp-ai-bridge",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -220,8 +220,7 @@
     "routes": [
       { "method": "GET",  "path": "/settings" },
       { "method": "POST", "path": "/settings" },
-      { "method": "GET",  "path": "/status" },
-      { "method": "GET",  "path": "/token" }
+      { "method": "GET",  "path": "/status" }
     ]
   }
 }

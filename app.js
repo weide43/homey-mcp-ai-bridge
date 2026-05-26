@@ -220,6 +220,7 @@ class HomeyMcpApp extends Homey.App {
       let count = 0;
 
       for (const [id, flow] of Object.entries(flows)) {
+        try {
         const triggerId = flow.trigger && flow.trigger.id;
         if (
           triggerId !== 'mcp_flow_tool' &&
@@ -247,7 +248,7 @@ class HomeyMcpApp extends Homey.App {
             const card = this._triggerCard;
             if (!card) throw new Error('Trigger card not available');
 
-            const requestId = `${id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            const requestId = `${id}_${Date.now()}_${require('crypto').randomBytes(4).toString('hex')}`;
 
             const responsePromise = new Promise((resolve) => {
               this._pendingResponses.set(requestId, resolve);
@@ -259,17 +260,29 @@ class HomeyMcpApp extends Homey.App {
               }, FLOW_RESPONSE_TIMEOUT_MS);
             });
 
-            await card.trigger(
-              { tool_name: toolName, tool_input: args.input || '' },
-              { flow_id: id, request_id: requestId, tool_name: toolName, tool_input: args.input || '' },
-            );
+            // B-03: if trigger() throws, clean up the pending entry immediately
+            try {
+              await card.trigger(
+                { tool_name: toolName, tool_input: args.input || '' },
+                { flow_id: id, request_id: requestId, tool_name: toolName, tool_input: args.input || '' },
+              );
+            } catch (err) {
+              if (this._pendingResponses.has(requestId)) {
+                this._pendingResponses.delete(requestId);
+              }
+              throw err;
+            }
 
             const { text, isError } = await responsePromise;
             if (isError) throw new Error(text);
             return text;
           },
         );
-        count++;
+          count++;
+        } catch (err) {
+          // B-07: one bad flow must not abort registration of the rest
+          this.log(`[HomeyMCP] Skipping flow "${flow?.name || id}": ${err.message}`);
+        }
       }
 
       if (count > 0) {
@@ -299,11 +312,6 @@ class HomeyMcpApp extends Homey.App {
   // ─── API endpoints for settings page ────────────────────────────
 
   async getSettings({ homey, query }) {
-    if (query && query.savepat !== undefined) {
-      this.homey.settings.set('personal_access_token', query.savepat || '');
-      return { success: true };
-    }
-
     const mcpUrl = this.homey.settings.get('mcp_url') || '';
     let localIp = this.homey.settings.get('local_address') || '';
     if (!localIp && mcpUrl) {
@@ -348,13 +356,6 @@ class HomeyMcpApp extends Homey.App {
     if (needsRestart) {
       await this._stopServer();
       await this._startServer();
-    }
-    return { success: true };
-  }
-
-  async getToken({ homey, query }) {
-    if (query.token !== undefined) {
-      this.homey.settings.set('personal_access_token', query.token || '');
     }
     return { success: true };
   }

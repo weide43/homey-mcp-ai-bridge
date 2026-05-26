@@ -1,4 +1,7 @@
 {
+  "1.4.1": {
+    "en": "Security and bug fixes: removed X-Forwarded-For spoofing vector, added 1 MB request body limit, batch size limit (max 20), CSPRNG session IDs, proper session cleanup on stop, 404 on unknown DELETE session. Fixed missing energy kWh cost methods, flow tool pending-response memory leak, per-flow error isolation, null ledring guard, devices_get_capability null check, logic_get missing-args guard, alarms_update and flows_update field allowlisting. Removed insecure PAT-in-query-string routes."
+  },
   "1.4.0": {
     "en": "5 new flow cards: server-started trigger, agent-connected trigger, input-contains condition, input-is-empty condition, and send-error action. IP whitelist and rate limiting for security. Live session counter in settings. Fixed notification app ID bug. New system_get_mcp_sessions tool."
   },
