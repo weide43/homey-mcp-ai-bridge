@@ -46,11 +46,11 @@
   "author": {
     "name": "Danny van Soerland",
     "email": "weide43@hotmail.com",
-    "website": "https://github.com/weide43/homey-mcp-server"
+    "website": "https://github.com/weide43/homey-mcp-ai-bridge"
   },
-  "support": "https://github.com/weide43/homey-mcp-server/issues",
-  "source": "https://github.com/weide43/homey-mcp-server",
-  "homepage": "https://github.com/weide43/homey-mcp-server",
+  "support": "https://github.com/weide43/homey-mcp-ai-bridge/issues",
+  "source": "https://github.com/weide43/homey-mcp-ai-bridge",
+  "homepage": "https://github.com/weide43/homey-mcp-ai-bridge",
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",

@@ -138,4 +138,4 @@ TECHNISCH
 Protocol: MCP 2025-03-26 (StreamableHTTP + JSON-RPC 2.0)
 Standaard poort: 52199 (aanpasbaar in instellingen)
 Authenticatie: optionele API-sleutel (Bearer of X-API-Key header)
-Broncode: https://github.com/weide43/homey-mcp-server
+Broncode: https://github.com/weide43/homey-mcp-ai-bridge
