@@ -1,20 +1,20 @@
-# Homey MCP Server
+# MCP AI Bridge
 
-Verbind elke AI-agent (Claude, GPT-4, Cursor, Windsurf...) met je Homey via het **Model Context Protocol (MCP)**. Bedien apparaten, beheer flows, zones, logica-variabelen, en nog veel meer — allemaal vanuit een AI-gesprek.
+Verbind elke AI-agent (Claude, GPT-4, Cursor, Windsurf...) met je Homey Pro via het **Model Context Protocol (MCP)**. Geef opdrachten in gewone taal en laat AI je slimme huis bedienen, geen programmeerkennis vereist.
 
 ---
 
 ## Wat is MCP?
 
-Het **Model Context Protocol** is een open standaard van Anthropic waarmee AI-assistenten tools kunnen aanroepen op externe systemen. Deze Homey-app fungeert als een MCP-server die draait op je Homey Pro. Elke MCP-compatibele AI-client kan er verbinding mee maken.
+Het **Model Context Protocol** is een open standaard waarmee AI-assistenten tools kunnen aanroepen op externe systemen. MCP AI Bridge draait als MCP-server op je Homey Pro. Elke MCP-compatibele AI-client kan er verbinding mee maken.
 
 ```
-Claude / GPT / Cursor
-       ↕ MCP (HTTP)
-  Homey Pro (lokaal netwerk)
-    └── Homey MCP Server App
-          ├── 81 tools beschikbaar
-          └── Volledige Homey Web API
+Claude / GPT-4 / Cursor / Windsurf
+          ↕ MCP (HTTP)
+    Homey Pro (lokaal netwerk)
+      └── MCP AI Bridge App
+            ├── 80+ tools beschikbaar
+            └── Volledige Homey Web API
 ```
 
 ---
@@ -24,362 +24,218 @@ Claude / GPT / Cursor
 | Vereiste | Versie |
 |----------|--------|
 | Homey Pro | 2016 / 2019 / 2023 / 2026 |
-| Homey firmware | ≥ 5.0.0 |
-| Athom account | my.homey.app |
+| Homey firmware | 5.0.0 of hoger |
 
-> **Let op:** Homey Cloud wordt niet ondersteund — de MCP HTTP-server vereist een lokaal netwerk (Homey Pro).
+> Homey Cloud wordt niet ondersteund. De MCP HTTP-server vereist een Homey Pro op je lokale netwerk.
 
 ---
 
 ## Installatie
 
-### Stap 1 — App installeren
+### Stap 1: App installeren
 
-**Via Homey App Store** *(aanbevolen)*
+**Via de Homey App Store (aanbevolen):**
 1. Open de Homey app op je telefoon
-2. Ga naar **Meer → Apps → App Store**
-3. Zoek op **"Homey MCP Server"**
-4. Klik op **Installeren**
+2. Ga naar Meer > Apps > App Store
+3. Zoek op "MCP AI Bridge"
+4. Klik op Installeren
 
-**Via Homey CLI** *(voor ontwikkelaars)*
+**Via Homey CLI (voor ontwikkelaars):**
 ```bash
-git clone https://github.com/weide43/homey-mcp-server
-cd homey-mcp-server
+git clone https://github.com/weide43/homey-mcp-ai-bridge
+cd homey-mcp-ai-bridge
 npm install
-# Maak een lokale preview stub aan voor de settings pagina:
-cp settings/homey.example.js settings/homey.js
 homey app run --remote
 ```
 
----
+### Stap 2: Verbinden met je AI-agent
 
-### Stap 2 — Personal Access Token aanmaken
-
-Een PAT geeft de app toegang tot alle Homey API's.
-
-1. Ga naar **[my.homey.app/account](https://my.homey.app/account)**
-2. Scroll naar **Personal Access Tokens**
-3. Klik op **Create new token**
-4. Geef het een naam (bijv. `MCP Server`)
-5. Selecteer **alle scopes** (of minimaal: devices, zones, flows, logic, insights, notifications, apps, users)
-6. Klik op **Create** en **kopieer de token** (je ziet hem maar één keer!)
-
----
-
-### Stap 3 — App configureren
-
-1. Open de Homey app → **Meer → Apps → Homey MCP Server → Configureren**
-2. Vul het **IP-adres** van je Homey in (eenmalig)
-3. Plak je **Personal Access Token** (alleen nodig voor flow-schrijfoperaties)
-4. Klik op **Token opslaan**, herstart daarna de app voor volledige activatie
-
-De status verandert naar **Actief** en je ziet de MCP URL:
+Na installatie vind je de MCP URL op de instellingenpagina:
 ```
-http://192.168.x.x:52199/mcp
+http://[jouw-homey-ip]:52199/mcp
 ```
 
----
-
-### Stap 4 — Verbinden met je AI-agent
-
-#### Claude Desktop
-
-Voeg toe aan `claude_desktop_config.json`:
-
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
+**Claude Desktop** - voeg toe aan `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "homey": {
       "type": "http",
-      "url": "http://192.168.x.x:52199/mcp"
+      "url": "http://[homey-ip]:52199/mcp"
     }
   }
 }
 ```
 
-Herstart Claude Desktop. Je ziet nu een 🔧 icoon — dat zijn de Homey tools!
-
-#### Claude Code (terminal)
-
+**Claude Code** (terminal):
 ```bash
-claude mcp add homey --transport http "http://192.168.x.x:52199/mcp"
+claude mcp add homey --transport http "http://[homey-ip]:52199/mcp"
 ```
 
-#### Cursor / Windsurf
-
-Voeg toe aan MCP settings:
+**Cursor / Windsurf** - voeg toe aan `mcp.json`:
 ```json
 {
-  "homey": {
-    "url": "http://192.168.x.x:52199/mcp"
+  "mcpServers": {
+    "homey": {
+      "url": "http://[homey-ip]:52199/mcp"
+    }
   }
 }
 ```
 
 ---
 
-## Beschikbare Tools (81)
+## Beschikbare Tools (80+)
 
-### 🏠 Zones (5 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `zones_list` | Alle zones met hiërarchie en apparaatcount |
-| `zones_get` | Details van één zone |
-| `zones_create` | Nieuwe zone/kamer aanmaken |
-| `zones_update` | Zone hernoemen of icoon wijzigen |
-| `zones_delete` | Zone verwijderen |
-
-### 📱 Apparaten (10 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `devices_list` | Alle apparaten (filter op zone, klasse, capability) |
-| `devices_get` | Volledige details + alle capability-waarden |
-| `devices_get_state` | Huidige staat van één apparaat |
-| `devices_get_all_states` | Staat van alle apparaten, gegroepeerd per zone |
-| `devices_set_capability` | **Universeel:** stel élke capability in op élk apparaat |
-| `devices_get_capability` | Huidige waarde van één capability |
-| `devices_rename` | Apparaat hernoemen |
-| `devices_move_to_zone` | Apparaat naar andere kamer verplaatsen |
-| `devices_zone_set_capability` | Alle apparaten in een zone tegelijk bedienen |
-| `devices_delete` | Apparaat verwijderen |
-
-### ⚡ Flows (9 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `flows_list` | Alle basis-flows (naam, actief, broken) |
-| `flows_get` | Flow details: when/and/then kaarten |
-| `flows_trigger` | Flow starten op naam of ID |
-| `flows_create` | Nieuwe flow aanmaken |
-| `flows_update` | Flow aanpassen (naam, kaarten, inschakelen) |
-| `flows_enable` | Flow in-/uitschakelen |
-| `flows_rename` | Flow hernoemen |
-| `flows_delete` | Flow verwijderen |
-| `flows_list_tokens` | Alle beschikbare flow tokens/tags |
-
-### 🔀 Advanced Flows (5 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `advanced_flows_list` | Alle Advanced Flows |
-| `advanced_flows_get` | Volledige node-structuur |
-| `advanced_flows_trigger` | Advanced Flow starten |
-| `advanced_flows_enable` | In-/uitschakelen |
-| `advanced_flows_delete` | Verwijderen |
-
-### 🃏 Flow Cards (5 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `flowcards_list_actions` | Alle beschikbare actie-kaarten van alle apps |
-| `flowcards_list_conditions` | Alle beschikbare conditie-kaarten |
-| `flowcards_list_triggers` | Alle beschikbare trigger-kaarten |
-| `flowcards_run_action` | Actie-kaart direct uitvoeren |
-| `flowcards_test_condition` | Conditie-kaart testen (geeft true/false) |
-
-### 📁 Flow Mappen (4 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `flow_folders_list` | Alle flow-mappen |
-| `flow_folders_create` | Nieuwe map aanmaken |
-| `flow_folders_rename` | Map hernoemen |
-| `flow_folders_delete` | Map verwijderen |
-
-### 🔢 Logica-variabelen (5 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `logic_list` | Alle variabelen (boolean, number, string) |
-| `logic_get` | Waarde van één variabele |
-| `logic_set` | Variabele-waarde instellen |
-| `logic_create` | Nieuwe variabele aanmaken |
-| `logic_delete` | Variabele verwijderen |
-
-### 📊 Insights (2 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `insights_list` | Alle beschikbare logs van alle apps en apparaten |
-| `insights_get_entries` | Historische data opvragen (tijdsbereik of preset) |
-
-### 🔔 Notificaties (3 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `notifications_send` | Notificatie sturen naar Homey-app |
-| `notifications_list` | Recente notificaties ophalen |
-| `notifications_delete` | Notificatie verwijderen |
-
-### 📦 Apps (9 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `apps_list` | Alle geïnstalleerde apps (versie, status) |
-| `apps_get` | Details van één app |
-| `apps_enable` | App inschakelen |
-| `apps_disable` | App uitschakelen |
-| `apps_restart` | App herstarten |
-| `apps_update` | App updaten naar nieuwste versie |
-| `apps_get_settings` | Alle instellingen van een app lezen |
-| `apps_set_setting` | Instelling van een app wijzigen |
-| `apps_uninstall` | App verwijderen |
-
-### 👥 Gebruikers & Aanwezigheid (6 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `users_list` | Alle gebruikers |
-| `users_get_presence` | Wie is er thuis? |
-| `geolocation_get` | Thuislocatie van de Homey |
-| `presence_get_all` | Aanwezigheid + slaapstatus van alle gebruikers |
-| `presence_set` | Thuis/weg instellen voor een gebruiker |
-| `presence_set_asleep` | Slaapstatus instellen |
-
-### ⏰ Wekkers (5 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `alarms_list` | Alle wekkers |
-| `alarms_get` | Details van één wekker |
-| `alarms_create` | Nieuwe wekker aanmaken |
-| `alarms_update` | Wekker aanpassen (tijd, dagen, naam) |
-| `alarms_delete` | Wekker verwijderen |
-
-### ⚡ Energie (3 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `energy_get_live` | Live energie-rapport (verbruik, solar) |
-| `energy_get_cost_settings` | kWh-prijs en valuta |
-| `energy_set_kwh_cost` | kWh-prijs instellen |
-
-### 🔊 Audio (2 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `audio_get_volume` | Huidig systeemvolume |
-| `audio_set_volume` | Systeemvolume instellen (0–100) |
-
-### ⚙️ Systeem (6 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `system_get_info` | Versie, platform, uptime, netwerk |
-| `system_get_memory` | RAM-gebruik |
-| `system_get_storage` | Schijfruimte |
-| `system_rename` | Homey hernoemen |
-| `system_reboot` | Homey herstarten (confirm vereist) |
-| `system_get_energy` | Energie-overzicht |
-
-### 🎤 Spraak & LED (2 tools)
-| Tool | Omschrijving |
-|------|-------------|
-| `speech_say` | Homey laten spreken (TTS, meerdere talen) |
-| `ledring_animate` | LED-ring animeren (loading, pulse, solid, off) |
+| Categorie | Aantal | Mogelijkheden |
+|-----------|--------|---------------|
+| Apparaten | 10 | lijst, details, capabilities lezen/instellen, hernoemen, zone-controle |
+| Zones | 5 | aanmaken, aanpassen, verwijderen |
+| Flows | 14 | basis- en geavanceerde flows, CRUD en trigger |
+| Flow Cards en mappen | 7 | triggers/condities/acties opvragen, uitvoeren, mapbeheer |
+| Logica-variabelen | 5 | aanmaken, lezen, instellen, verwijderen |
+| Inzichten | 2 | historische data en logs |
+| Notificaties | 3 | versturen, lijst, verwijderen |
+| Apps | 9 | in-/uitschakelen, herstarten, updaten, instellingen |
+| Gebruikers en aanwezigheid | 6 | wie is thuis, thuis/weg, slaapstatus |
+| Wekkers | 5 | aanmaken, aanpassen, verwijderen |
+| Energie | 3 | live verbruik, kosten |
+| Audio | 2 | volume lezen/instellen |
+| Systeem | 8 | info, geheugen, opslag, hernoemen, herstarten, TTS, LED, sessies |
 
 ---
 
-## Voorbeelden
+## Eigen AI-tools via Flow Cards
 
-### Apparaten bedienen
+MCP AI Bridge voegt acht flow-cards toe. Hiermee bouw je eigen AI-tools volledig in de Homey flow-editor, zonder code.
 
-> *"Zet alle lampen in de woonkamer uit"*
+### ALS (3 triggers)
 
-De AI roept `devices_zone_set_capability` aan:
-```json
-{
-  "zone_id": "...",
-  "capability": "onoff",
-  "value": false,
-  "class": "light"
-}
+| Trigger | Beschrijving | Tokens |
+|---------|-------------|--------|
+| AI-agent roept een aangepaste tool aan | Geactiveerd wanneer de AI een custom tool aanroept | tool_name, tool_input |
+| MCP AI Bridge-server start op | Geactiveerd elke keer dat de server opstart | tool_count, mcp_url |
+| Een AI-agent verbindt | Geactiveerd wanneer een AI-client een sessie opent | session_id, session_count |
+
+### EN (3 condities)
+
+| Conditie | Beschrijving |
+|----------|-------------|
+| De toolnaam is / is niet [naam] | Filter op toolnaam |
+| De tool-invoer bevat / bevat niet [tekst] | Controleer de inhoud van de invoer |
+| De tool-invoer is / is niet leeg | Controleer of er invoer is meegegeven |
+
+### DAN (2 acties)
+
+| Actie | Beschrijving |
+|-------|-------------|
+| Stuur [antwoord] terug naar de AI-agent | Geeft een tekstantwoord terug, ondersteunt flow-tokens |
+| Stuur fout [bericht] terug naar de AI-agent | Stuurt een foutrespons terug naar de AI |
+
+### Voorbeeldflow
+
+```
+ALS:  AI-agent roept een aangepaste tool aan
+EN:   Toolnaam is "get_weather"
+DAN:  [weersactie uitvoeren]
+DAN:  Stuur "De temperatuur is {{temperature}} graden" terug naar de AI-agent
 ```
 
-### Flow aanmaken
+De AI wacht tot 10 seconden op een antwoord. Zonder "Stuur antwoord terug"-kaart krijgt de AI het bericht "flow triggered successfully".
 
-> *"Maak een flow die elke dag om 7:30 het licht in de keuken aanzet"*
+Na het aanmaken van een flow met de ALS-triggerkaart: herstart MCP AI Bridge. De flow verschijnt automatisch als MCP-tool met de naam `flow_[flownaam]`.
 
-De AI roept `flows_create` aan met de juiste trigger- en actie-kaarten.
+---
 
-### Historische data analyseren
+## Beveiliging
 
-> *"Hoeveel energie heb ik vorige maand verbruikt?"*
+### API-sleutel (optioneel)
 
-De AI roept `insights_get_entries` aan met `resolution: "last31Days"`.
+Stel een API-sleutel in via de app-instellingen. Clients sturen deze mee via:
+- `Authorization: Bearer <sleutel>`
+- `X-API-Key: <sleutel>`
 
-### Logica-variabele instellen
+Zonder sleutel vertrouwt de server je lokale netwerk (standaard).
 
-> *"Zet de variabele 'Vakantie' op true"*
+### IP-whitelist (optioneel)
 
-De AI roept `logic_set` aan met `variable_name: "Vakantie"` en `value: true`.
+Beperk toegang tot specifieke IP-adressen. Vul een kommagescheiden lijst in, of gebruik `*` voor alle IPs (standaard). Het `/health`-eindpunt is altijd toegankelijk, ongeacht de whitelist.
+
+### Rate limiting (optioneel)
+
+Stel een maximumaantal aanvragen per IP per 60 seconden in. Clients die de limiet overschrijden krijgen HTTP 429. Stel in op 0 om uit te schakelen.
+
+Beide instellingen zijn direct van kracht, herstarten is niet nodig.
+
+---
+
+## OpenAPI Spec en REST-snelkoppelingen
+
+Elke tool is ook beschikbaar als gewone REST-aanroep:
+
+| Endpoint | Methode | Beschrijving |
+|----------|---------|-------------|
+| `/openapi.json` | GET | Volledige OpenAPI 3.1-spec |
+| `/tools/{naam}` | POST | Tool direct aanroepen |
+| `/health` | GET | Serverstatus |
+| `/info` | GET | Serverinfo en toollijst |
+| `/mcp` | POST/GET/DELETE | MCP JSON-RPC en SSE |
+
+```bash
+# Health check
+curl http://[homey-ip]:52199/health
+# {"status":"ok","version":"1.4.0","tools":80,"sessions":1}
+```
+
+---
+
+## Personal Access Token (optioneel)
+
+Alleen nodig voor het aanmaken, aanpassen of verwijderen van flows:
+
+1. Ga naar my.homey.app > Instellingen > API
+2. Maak een token aan met de `homey.flow` scope
+3. Plak het token in de app-instellingen
+4. Herstart de app
 
 ---
 
 ## Probleemoplossing
 
-### Settings pagina laadt niet
-- Herstart de app via **Instellingen → Homey MCP Server → ⟳**
-- Controleer of de app actief is in Meer → Apps
-
-### "Token validation failed"
-- Controleer of je PAT correct is gekopieerd
-- Zorg dat de PAT niet verlopen is (my.homey.app/account)
-- Controleer of alle benodigde scopes geselecteerd zijn
-
-### AI-agent kan niet verbinden
-- Controleer of je het juiste IP-adres gebruikt (zie settings pagina)
+**AI-agent kan niet verbinden:**
+- Controleer of het IP-adres klopt (zie instellingenpagina)
 - Zorg dat poort 52199 niet geblokkeerd wordt door je firewall
-- Test de verbinding: open `http://[homey-ip]:52199/health` in je browser
+- Test: open `http://[homey-ip]:52199/health` in je browser
 
-### "Port already in use"
-- Wijzig de poort in de app-instellingen (bijv. 52200)
-- Herstart de app
+**Flows aanmaken lukt niet:**
+- Controleer of je een geldig Personal Access Token hebt ingesteld
+- Controleer of de token de `homey.flow` scope heeft
+
+**Verbinding geweigerd (403):**
+- Controleer of je IP in de whitelist staat, of dat de API-sleutel correct is
+
+**Te veel aanvragen (429):**
+- Je hebt de rate limit bereikt. Wacht even of verhoog de limiet in de instellingen.
+
+**Settings pagina laadt niet:**
+- Herstart de app via de Homey-app
 
 ---
 
 ## Technische Details
 
-- **Protocol:** MCP 2025-03-26 (StreamableHTTP, JSON-RPC 2.0)
-- **Transport:** HTTP POST + SSE voor streaming
-- **Auth:** Geen (vertrouwt op lokaal netwerk) — gebruik een firewall voor publieke netwerken
-- **Node.js:** ≥ 18 vereist
+- **Protocol:** MCP 2025-03-26 (StreamableHTTP + JSON-RPC 2.0)
+- **Standaard poort:** 52199 (aanpasbaar in instellingen)
+- **Authenticatie:** optionele API-sleutel (Bearer of X-API-Key)
 - **Homey SDK:** v3
-
-### Health check
-```bash
-curl http://[homey-ip]:52199/health
-# {"status":"ok","version":"1.0.0","tools":81}
-```
-
-### Beschikbare endpoints
-| Endpoint | Methode | Omschrijving |
-|----------|---------|-------------|
-| `/mcp` | POST | MCP JSON-RPC requests |
-| `/mcp` | GET | SSE stream voor server-push |
-| `/mcp` | DELETE | Sessie sluiten |
-| `/health` | GET | Health check |
-| `/info` | GET | Server info + tool lijst |
-
----
-
-## Bijdragen
-
-Pull requests zijn welkom!
-
-**Nieuwe tool toevoegen:**
-1. Maak een functie in het juiste bestand in `lib/tools/`
-2. Roep `server.registerTool(name, description, inputSchema, handler)` aan
-3. Voeg de import toe in `lib/tools/index.js`
-4. Test met `homey app install` op je eigen Homey Pro
-
-**Development setup:**
-```bash
-git clone https://github.com/weide43/homey-mcp-server
-cd homey-mcp-server
-npm install
-# Maak een lokale settings preview stub aan (niet inchecken):
-cp settings/homey.example.js settings/homey.js
-# Pas settings/homey.js aan met jouw lokale IP
-homey app install
-```
+- **Platforms:** lokaal (Homey Pro)
 
 ---
 
 ## Licentie
 
-MIT — vrij te gebruiken, aanpassen en distribueren.
+MIT
 
 ---
 
-*Gebouwd door de Homey community • Niet officieel gelieerd aan Athom of Anthropic*
+*Gebouwd door de Homey community. Niet officieel gelieerd aan Athom of Anthropic.*
