@@ -1,6 +1,6 @@
 {
   "name": "community.mcp-ai-bridge",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "MCP Server for Homey - Connect AI agents to your smart home",
   "main": "app.js",
   "scripts": {
