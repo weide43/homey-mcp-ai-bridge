@@ -1,6 +1,6 @@
 {
   "id": "community.mcp-ai-bridge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -72,18 +72,58 @@
           {
             "name": "tool_name",
             "type": "string",
-            "title": {
-              "en": "Tool name",
-              "nl": "Toolnaam"
-            }
+            "title": { "en": "Tool name", "nl": "Toolnaam" }
           },
           {
             "name": "tool_input",
             "type": "string",
-            "title": {
-              "en": "Tool input",
-              "nl": "Tool-invoer"
-            }
+            "title": { "en": "Tool input", "nl": "Tool-invoer" }
+          }
+        ]
+      },
+      {
+        "id": "mcp_server_started",
+        "title": {
+          "en": "MCP AI Bridge server starts",
+          "nl": "MCP AI Bridge-server start op"
+        },
+        "titleFormatted": {
+          "en": "MCP AI Bridge server starts with [[tool_count]] tools",
+          "nl": "MCP AI Bridge-server start op met [[tool_count]] tools"
+        },
+        "tokens": [
+          {
+            "name": "tool_count",
+            "type": "number",
+            "title": { "en": "Tool count", "nl": "Aantal tools" }
+          },
+          {
+            "name": "mcp_url",
+            "type": "string",
+            "title": { "en": "MCP URL", "nl": "MCP URL" }
+          }
+        ]
+      },
+      {
+        "id": "mcp_agent_connected",
+        "title": {
+          "en": "An AI agent connects",
+          "nl": "Een AI-agent verbindt"
+        },
+        "titleFormatted": {
+          "en": "An AI agent connects (session [[session_id]])",
+          "nl": "Een AI-agent verbindt (sessie [[session_id]])"
+        },
+        "tokens": [
+          {
+            "name": "session_id",
+            "type": "string",
+            "title": { "en": "Session ID", "nl": "Sessie-ID" }
+          },
+          {
+            "name": "session_count",
+            "type": "number",
+            "title": { "en": "Active sessions", "nl": "Actieve sessies" }
           }
         ]
       }
@@ -103,12 +143,38 @@
           {
             "name": "tool_name",
             "type": "text",
-            "placeholder": {
-              "en": "tool_name",
-              "nl": "toolnaam"
-            }
+            "placeholder": { "en": "tool_name", "nl": "toolnaam" }
           }
         ]
+      },
+      {
+        "id": "mcp_tool_input_contains",
+        "title": {
+          "en": "The tool input !{{contains|does not contain}} [[text]]",
+          "nl": "De tool-invoer !{{bevat|bevat niet}} [[text]]"
+        },
+        "titleFormatted": {
+          "en": "The tool input !{{contains|does not contain}} [[text]]",
+          "nl": "De tool-invoer !{{bevat|bevat niet}} [[text]]"
+        },
+        "args": [
+          {
+            "name": "text",
+            "type": "text",
+            "placeholder": { "en": "search text", "nl": "zoektekst" }
+          }
+        ]
+      },
+      {
+        "id": "mcp_tool_input_is_empty",
+        "title": {
+          "en": "The tool input !{{is|is not}} empty",
+          "nl": "De tool-invoer !{{is|is niet}} leeg"
+        },
+        "titleFormatted": {
+          "en": "The tool input !{{is|is not}} empty",
+          "nl": "De tool-invoer !{{is|is niet}} leeg"
+        }
       }
     ],
     "actions": [
@@ -126,10 +192,25 @@
           {
             "name": "response",
             "type": "text",
-            "placeholder": {
-              "en": "Response text...",
-              "nl": "Antwoordtekst..."
-            }
+            "placeholder": { "en": "Response text...", "nl": "Antwoordtekst..." }
+          }
+        ]
+      },
+      {
+        "id": "mcp_send_error",
+        "title": {
+          "en": "Return an error to the AI agent",
+          "nl": "Stuur een fout terug naar de AI-agent"
+        },
+        "titleFormatted": {
+          "en": "Return error [[message]] to the AI agent",
+          "nl": "Stuur fout [[message]] terug naar de AI-agent"
+        },
+        "args": [
+          {
+            "name": "message",
+            "type": "text",
+            "placeholder": { "en": "Error message...", "nl": "Foutmelding..." }
           }
         ]
       }
@@ -137,22 +218,10 @@
   },
   "api": {
     "routes": [
-      {
-        "method": "GET",
-        "path": "/settings"
-      },
-      {
-        "method": "POST",
-        "path": "/settings"
-      },
-      {
-        "method": "GET",
-        "path": "/status"
-      },
-      {
-        "method": "GET",
-        "path": "/token"
-      }
+      { "method": "GET",  "path": "/settings" },
+      { "method": "POST", "path": "/settings" },
+      { "method": "GET",  "path": "/status" },
+      { "method": "GET",  "path": "/token" }
     ]
   }
 }

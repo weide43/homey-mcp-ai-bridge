@@ -58,7 +58,7 @@
 <!-- Status + URL -->
 <div class="card">
   <div class="card-title">Status</div>
-  <div class="status-bar"><div class="dot"></div><span>MCP Server actief</span></div>
+  <div class="status-bar"><div class="dot"></div><span id="statusText">MCP Server actief</span><span id="sessionBadge" style="margin-left:auto;font-size:12px;color:#666;display:none">0 sessies</span></div>
   <div class="url-row">
     <span class="url-text" id="urlText">http://&lt;homey-ip&gt;:52199/mcp</span>
     <button class="copy-small" id="copyUrl">Kopieer</button>
@@ -92,6 +92,18 @@
   </div>
   <button class="btn-primary" id="patBtn" style="margin-top:12px">Token opslaan</button>
   <div id="patStatus" style="display:none;margin-top:8px;font-size:13px;color:#2e7d32">✓ Token opgeslagen</div>
+</div>
+
+<!-- Security -->
+<div class="card">
+  <div class="card-title">Security</div>
+  <label>IP Whitelist <span style="font-weight:400;font-size:11px;color:#aaa">(optional — comma-separated, leave blank to allow all)</span></label>
+  <input type="text" id="ipWhitelistInput" placeholder="e.g. 192.168.1.10, 192.168.1.20">
+  <div class="hint">Only these IP addresses can reach the MCP server. The /health endpoint is always public.</div>
+  <label style="margin-top:14px">Rate limit <span style="font-weight:400;font-size:11px;color:#aaa">(requests per IP per minute, 0 = unlimited)</span></label>
+  <input type="number" id="rateLimitInput" value="0" min="0" max="9999" style="width:140px">
+  <button class="btn-primary" id="securityBtn" style="margin-top:14px">Save security settings</button>
+  <div id="securityStatus" style="display:none;margin-top:8px;font-size:13px;color:#2e7d32"></div>
 </div>
 
 <!-- API Key -->
@@ -425,6 +437,51 @@ function onHomeyReady(Homey) {
   // Claude mode handled by setMode() via onclick
 
   document.getElementById('mergeJson').addEventListener('input', update);
+
+  // Live session counter — poll /status every 10 s
+  function refreshSessions() {
+    fetch('/api/app/community.mcp-ai-bridge/status', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(s) {
+        if (!s) return;
+        var badge = document.getElementById('sessionBadge');
+        badge.style.display = 'inline';
+        badge.textContent = s.session_count + ' sessie' + (s.session_count === 1 ? '' : 's') +
+                            ' · ' + s.tool_count + ' tools';
+      })
+      .catch(function() {});
+  }
+  refreshSessions();
+  setInterval(refreshSessions, 10000);
+
+  // Security (IP whitelist + rate limit)
+  fetch('/api/app/community.mcp-ai-bridge/settings', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(s) {
+      if (!s) return;
+      if (s.ip_whitelist) document.getElementById('ipWhitelistInput').value = s.ip_whitelist;
+      if (s.rate_limit)   document.getElementById('rateLimitInput').value   = s.rate_limit;
+    })
+    .catch(function() {});
+
+  document.getElementById('securityBtn').addEventListener('click', function() {
+    var whitelist = document.getElementById('ipWhitelistInput').value.trim();
+    var rateLimit = parseInt(document.getElementById('rateLimitInput').value || '0', 10);
+    var btn = document.getElementById('securityBtn');
+    var st  = document.getElementById('securityStatus');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    fetch('/api/app/community.mcp-ai-bridge/settings', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip_whitelist: whitelist, rate_limit: rateLimit })
+    }).then(function() {
+      btn.disabled = false; btn.textContent = 'Save security settings';
+      st.textContent = 'Security settings saved'; st.style.color = '#2e7d32'; st.style.display = 'block';
+      setTimeout(function() { st.style.display = 'none'; }, 3000);
+    }).catch(function() {
+      btn.disabled = false; btn.textContent = 'Save security settings';
+    });
+  });
 
   // API Key
   var _hasApiKey = false;

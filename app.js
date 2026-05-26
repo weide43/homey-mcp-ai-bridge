@@ -6,14 +6,14 @@ const McpServer = require('./lib/McpServer');
 const HomeySDKClient = require('./lib/HomeySDKClient');
 const { registerAllTools } = require('./lib/tools/index');
 
-const DEFAULT_PORT = 52199;
+const DEFAULT_PORT             = 52199;
 const FLOW_RESPONSE_TIMEOUT_MS = 10000; // wait up to 10 s for "Return response" action card
 
 class HomeyMcpApp extends Homey.App {
 
   async onInit() {
     this.log('[HomeyMCP] App starting...');
-    this._pendingResponses = new Map(); // requestId -> resolve fn
+    this._pendingResponses = new Map(); // requestId -> resolve({ text, isError })
     await this._registerFlowCards();
     await this._startServer();
     this.log('[HomeyMCP] App ready.');
@@ -26,6 +26,10 @@ class HomeyMcpApp extends Homey.App {
   // ─── Flow card listeners ──────────────────────────────────────────
 
   async _registerFlowCards() {
+    // Get card references for triggers we fire ourselves
+    try { this._serverStartedCard   = this.homey.flow.getTriggerCard('mcp_server_started');   } catch (_) {}
+    try { this._agentConnectedCard  = this.homey.flow.getTriggerCard('mcp_agent_connected');  } catch (_) {}
+
     // EN: tool name is / is not [name]
     try {
       this.homey.flow
@@ -34,10 +38,34 @@ class HomeyMcpApp extends Homey.App {
           return state.tool_name === args.tool_name;
         });
     } catch (err) {
-      this.log(`[HomeyMCP] Condition card registration failed: ${err.message}`);
+      this.log(`[HomeyMCP] Condition card mcp_tool_name_is failed: ${err.message}`);
     }
 
-    // DAN: return [response] to the AI agent
+    // EN: tool input contains [text]
+    try {
+      this.homey.flow
+        .getConditionCard('mcp_tool_input_contains')
+        .registerRunListener(async (args, state) => {
+          const input  = (state.tool_input || '').toLowerCase();
+          const needle = (args.text        || '').toLowerCase();
+          return needle.length > 0 && input.includes(needle);
+        });
+    } catch (err) {
+      this.log(`[HomeyMCP] Condition card mcp_tool_input_contains failed: ${err.message}`);
+    }
+
+    // EN: tool input is (not) empty
+    try {
+      this.homey.flow
+        .getConditionCard('mcp_tool_input_is_empty')
+        .registerRunListener(async (args, state) => {
+          return !state.tool_input || state.tool_input.trim() === '';
+        });
+    } catch (err) {
+      this.log(`[HomeyMCP] Condition card mcp_tool_input_is_empty failed: ${err.message}`);
+    }
+
+    // DAN: return [response] to AI agent (success)
     try {
       this.homey.flow
         .getActionCard('mcp_send_response')
@@ -45,11 +73,26 @@ class HomeyMcpApp extends Homey.App {
           const resolve = this._pendingResponses.get(state.request_id);
           if (resolve) {
             this._pendingResponses.delete(state.request_id);
-            resolve(args.response || '');
+            resolve({ text: args.response || '', isError: false });
           }
         });
     } catch (err) {
-      this.log(`[HomeyMCP] Action card registration failed: ${err.message}`);
+      this.log(`[HomeyMCP] Action card mcp_send_response failed: ${err.message}`);
+    }
+
+    // DAN: return [error] to AI agent (isError: true)
+    try {
+      this.homey.flow
+        .getActionCard('mcp_send_error')
+        .registerRunListener(async (args, state) => {
+          const resolve = this._pendingResponses.get(state.request_id);
+          if (resolve) {
+            this._pendingResponses.delete(state.request_id);
+            resolve({ text: args.message || 'An error occurred in the flow', isError: true });
+          }
+        });
+    } catch (err) {
+      this.log(`[HomeyMCP] Action card mcp_send_error failed: ${err.message}`);
     }
   }
 
@@ -94,18 +137,47 @@ class HomeyMcpApp extends Homey.App {
       this._triggerCard = null;
     }
 
-    // Create MCP server with optional API key authentication
+    // Create MCP server with all security options
     this._mcpServer = new McpServer({
       port,
-      log: this,
-      getApiKey: () => this.homey.settings.get('api_key') || null,
+      log:            this,
+      getApiKey:      () => this.homey.settings.get('api_key')      || null,
+      getIpWhitelist: () => this.homey.settings.get('ip_whitelist') || null,
+      getRateLimit:   () => {
+        const v = parseInt(this.homey.settings.get('rate_limit') || '0', 10);
+        return v > 0 ? v : null;
+      },
+    });
+
+    // Wire session events to flow cards
+    this._mcpServer.on('session:opened', ({ sessionId, count }) => {
+      if (this._agentConnectedCard) {
+        this._agentConnectedCard
+          .trigger({ session_id: sessionId, session_count: count }, {})
+          .catch(() => {});
+      }
     });
 
     // Register built-in tools
     registerAllTools(this._mcpServer, this._client, this.homey);
 
-    // Register flow-defined tools (flows using the mcp_flow_tool trigger card)
+    // Register flow-defined tools
     await this._registerFlowTools();
+
+    // Register meta tool: list active MCP sessions
+    this._mcpServer.registerTool(
+      'system_get_mcp_sessions',
+      'Get the currently active MCP sessions connected to this server.',
+      { type: 'object', properties: {} },
+      async () => {
+        const sessions = Array.from(this._mcpServer.sessions.entries()).map(([id, s]) => ({
+          session_id:  id,
+          created_at:  new Date(s.createdAt).toISOString(),
+          age_seconds: Math.round((Date.now() - s.createdAt) / 1000),
+        }));
+        return { count: sessions.length, sessions };
+      },
+    );
 
     // Start listening
     try {
@@ -117,6 +189,13 @@ class HomeyMcpApp extends Homey.App {
       this.homey.settings.set('status',     'running');
       this.homey.settings.set('mcp_url',    url);
       this.homey.settings.set('tool_count', this._mcpServer.tools.size);
+
+      // Fire "server started" flow card
+      if (this._serverStartedCard) {
+        this._serverStartedCard
+          .trigger({ tool_count: this._mcpServer.tools.size, mcp_url: url }, {})
+          .catch(() => {});
+      }
     } catch (err) {
       this.log(`[HomeyMCP] Failed to start server: ${err.message}`);
       this.homey.settings.set('status', `Error: ${err.message}`);
@@ -125,6 +204,7 @@ class HomeyMcpApp extends Homey.App {
 
   async _stopServer() {
     if (this._mcpServer) {
+      this._mcpServer.removeAllListeners();
       await this._mcpServer.stop();
       this._mcpServer = null;
     }
@@ -140,7 +220,6 @@ class HomeyMcpApp extends Homey.App {
       let count = 0;
 
       for (const [id, flow] of Object.entries(flows)) {
-        // Only register flows that use the mcp_flow_tool trigger card
         const triggerId = flow.trigger && flow.trigger.id;
         if (
           triggerId !== 'mcp_flow_tool' &&
@@ -168,26 +247,26 @@ class HomeyMcpApp extends Homey.App {
             const card = this._triggerCard;
             if (!card) throw new Error('Trigger card not available');
 
-            // Unique ID so the "Return response" action card resolves exactly this call
             const requestId = `${id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
             const responsePromise = new Promise((resolve) => {
               this._pendingResponses.set(requestId, resolve);
-              // Fall back after timeout when no "Return response" action card is used
               setTimeout(() => {
                 if (this._pendingResponses.has(requestId)) {
                   this._pendingResponses.delete(requestId);
-                  resolve(`Flow "${flowName}" triggered successfully`);
+                  resolve({ text: `Flow "${flowName}" triggered successfully`, isError: false });
                 }
               }, FLOW_RESPONSE_TIMEOUT_MS);
             });
 
             await card.trigger(
               { tool_name: toolName, tool_input: args.input || '' },
-              { flow_id: id, request_id: requestId, tool_name: toolName },
+              { flow_id: id, request_id: requestId, tool_name: toolName, tool_input: args.input || '' },
             );
 
-            return await responsePromise;
+            const { text, isError } = await responsePromise;
+            if (isError) throw new Error(text);
+            return text;
           },
         );
         count++;
@@ -210,7 +289,6 @@ class HomeyMcpApp extends Homey.App {
       if (this.homey.cloud?.getLocalAddress) {
         const addr = await this.homey.cloud.getLocalAddress();
         if (addr) {
-          // Strip any port suffix (e.g. "192.168.2.178:80" → "192.168.2.178")
           return addr.split(':')[0];
         }
       }
@@ -221,7 +299,6 @@ class HomeyMcpApp extends Homey.App {
   // ─── API endpoints for settings page ────────────────────────────
 
   async getSettings({ homey, query }) {
-    // Handle PAT save via GET query param (POST is blocked by CORS preflight)
     if (query && query.savepat !== undefined) {
       this.homey.settings.set('personal_access_token', query.savepat || '');
       return { success: true };
@@ -238,15 +315,19 @@ class HomeyMcpApp extends Homey.App {
       local_ip:      localIp,
       mcp_url:       mcpUrl || null,
       status:        this.homey.settings.get('status')        || 'running',
-      tool_count:    this._mcpServer ? this._mcpServer.tools.size : 0,
+      tool_count:    this._mcpServer ? this._mcpServer.tools.size    : 0,
+      session_count: this._mcpServer ? this._mcpServer.sessions.size : 0,
       has_pat:       !!(this.homey.settings.get('personal_access_token')),
       has_api_key:   !!(this.homey.settings.get('api_key')),
+      ip_whitelist:  this.homey.settings.get('ip_whitelist') || '',
+      rate_limit:    this.homey.settings.get('rate_limit')   || 0,
     };
   }
 
   async postSettings({ homey, body }) {
-    const { port, local_address, personal_access_token, api_key } = body || {};
+    const { port, local_address, personal_access_token, api_key, ip_whitelist, rate_limit } = body || {};
     let needsRestart = false;
+
     if (port)                        { this.homey.settings.set('port',          parseInt(port, 10)); needsRestart = true; }
     if (local_address !== undefined) { this.homey.settings.set('local_address', local_address || ''); needsRestart = true; }
     if (personal_access_token !== undefined) {
@@ -254,6 +335,15 @@ class HomeyMcpApp extends Homey.App {
     }
     if (api_key !== undefined) {
       this.homey.settings.set('api_key', api_key || '');
+      // Takes effect immediately via the getApiKey callback
+    }
+    if (ip_whitelist !== undefined) {
+      this.homey.settings.set('ip_whitelist', ip_whitelist || '');
+      // Takes effect immediately via the getIpWhitelist callback
+    }
+    if (rate_limit !== undefined) {
+      this.homey.settings.set('rate_limit', parseInt(rate_limit, 10) || 0);
+      // Takes effect immediately via the getRateLimit callback
     }
     if (needsRestart) {
       await this._stopServer();
@@ -271,11 +361,11 @@ class HomeyMcpApp extends Homey.App {
 
   async getStatus({ homey, query }) {
     return {
-      status:     this.homey.settings.get('status')    || 'running',
-      mcp_url:    this.homey.settings.get('mcp_url')   || null,
-      port:       this.homey.settings.get('port')       || DEFAULT_PORT,
-      tool_count: this._mcpServer ? this._mcpServer.tools.size    : 0,
-      sessions:   this._mcpServer ? this._mcpServer.sessions.size : 0,
+      status:        this.homey.settings.get('status')    || 'running',
+      mcp_url:       this.homey.settings.get('mcp_url')   || null,
+      port:          this.homey.settings.get('port')       || DEFAULT_PORT,
+      tool_count:    this._mcpServer ? this._mcpServer.tools.size    : 0,
+      session_count: this._mcpServer ? this._mcpServer.sessions.size : 0,
     };
   }
 
