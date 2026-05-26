@@ -1,5 +1,5 @@
 {
-  "id": "community.synapse-mcp",
+  "id": "community.mcp-ai-bridge",
   "version": "1.3.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
@@ -7,8 +7,8 @@
     "local"
   ],
   "name": {
-    "en": "Synapse MCP",
-    "nl": "Synapse MCP"
+    "en": "MCP AI Bridge",
+    "nl": "MCP AI Bridge"
   },
   "description": {
     "en": "Your Homey Pro, powered by AI.",
@@ -83,6 +83,48 @@
             "title": {
               "en": "Tool input",
               "nl": "Tool-invoer"
+            }
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "mcp_tool_name_is",
+        "title": {
+          "en": "The tool name !{{is|is not}} [[tool_name]]",
+          "nl": "De toolnaam !{{is|is niet}} [[tool_name]]"
+        },
+        "args": [
+          {
+            "name": "tool_name",
+            "type": "text",
+            "placeholder": {
+              "en": "tool_name",
+              "nl": "toolnaam"
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "mcp_send_response",
+        "title": {
+          "en": "Return a response to the AI agent",
+          "nl": "Stuur een antwoord terug naar de AI-agent"
+        },
+        "titleFormatted": {
+          "en": "Return [[response]] to the AI agent",
+          "nl": "Stuur [[response]] terug naar de AI-agent"
+        },
+        "args": [
+          {
+            "name": "response",
+            "type": "text",
+            "placeholder": {
+              "en": "Response text...",
+              "nl": "Antwoordtekst..."
             }
           }
         ]

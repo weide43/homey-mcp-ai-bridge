@@ -293,7 +293,7 @@ function onHomeyReady(Homey) {
   }
 
   // 2. Try settings API (web interface)
-  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
+  fetch('/api/app/community.mcp-ai-bridge/settings', { credentials: 'include' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(s) {
       if (!s) return;
@@ -320,7 +320,7 @@ function onHomeyReady(Homey) {
   if (typeof Homey.get === 'function') {
     Homey.get('personal_access_token', function(e, v) { if (v) showPatSaved(); });
   }
-  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
+  fetch('/api/app/community.mcp-ai-bridge/settings', { credentials: 'include' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(s) { if (s && s.has_pat) showPatSaved(); })
     .catch(function() {});
@@ -381,7 +381,7 @@ function onHomeyReady(Homey) {
     LS.s('ip', ip); LS.s('port', port);
     update();
     // Also save port to Homey settings
-    fetch('/api/app/community.synapse-mcp/settings', {
+    fetch('/api/app/community.mcp-ai-bridge/settings', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ port: port, local_address: ip })
@@ -438,7 +438,7 @@ function onHomeyReady(Homey) {
   if (typeof Homey.get === 'function') {
     Homey.get('api_key', function(e, v) { if (v) showApiKeySaved(); });
   }
-  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
+  fetch('/api/app/community.mcp-ai-bridge/settings', { credentials: 'include' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(s) { if (s && s.has_api_key) showApiKeySaved(); })
     .catch(function() {});
@@ -482,7 +482,7 @@ function onHomeyReady(Homey) {
       setTimeout(function() { st.style.display = 'none'; }, 4000);
     }
 
-    fetch('/api/app/community.synapse-mcp/settings', {
+    fetch('/api/app/community.mcp-ai-bridge/settings', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: key })

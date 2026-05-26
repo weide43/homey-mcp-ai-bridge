@@ -7,17 +7,50 @@ const HomeySDKClient = require('./lib/HomeySDKClient');
 const { registerAllTools } = require('./lib/tools/index');
 
 const DEFAULT_PORT = 52199;
+const FLOW_RESPONSE_TIMEOUT_MS = 10000; // wait up to 10 s for "Return response" action card
 
 class HomeyMcpApp extends Homey.App {
 
   async onInit() {
     this.log('[HomeyMCP] App starting...');
+    this._pendingResponses = new Map(); // requestId -> resolve fn
+    await this._registerFlowCards();
     await this._startServer();
     this.log('[HomeyMCP] App ready.');
   }
 
   async onUninit() {
     await this._stopServer();
+  }
+
+  // ─── Flow card listeners ──────────────────────────────────────────
+
+  async _registerFlowCards() {
+    // EN: tool name is / is not [name]
+    try {
+      this.homey.flow
+        .getConditionCard('mcp_tool_name_is')
+        .registerRunListener(async (args, state) => {
+          return state.tool_name === args.tool_name;
+        });
+    } catch (err) {
+      this.log(`[HomeyMCP] Condition card registration failed: ${err.message}`);
+    }
+
+    // DAN: return [response] to the AI agent
+    try {
+      this.homey.flow
+        .getActionCard('mcp_send_response')
+        .registerRunListener(async (args, state) => {
+          const resolve = this._pendingResponses.get(state.request_id);
+          if (resolve) {
+            this._pendingResponses.delete(state.request_id);
+            resolve(args.response || '');
+          }
+        });
+    } catch (err) {
+      this.log(`[HomeyMCP] Action card registration failed: ${err.message}`);
+    }
   }
 
   // ─── Server lifecycle ─────────────────────────────────────────────
@@ -109,7 +142,11 @@ class HomeyMcpApp extends Homey.App {
       for (const [id, flow] of Object.entries(flows)) {
         // Only register flows that use the mcp_flow_tool trigger card
         const triggerId = flow.trigger && flow.trigger.id;
-        if (triggerId !== 'mcp_flow_tool' && triggerId !== 'community.synapse-mcp:mcp_flow_tool') continue;
+        if (
+          triggerId !== 'mcp_flow_tool' &&
+          triggerId !== 'community.mcp-ai-bridge:mcp_flow_tool' &&
+          triggerId !== 'community.synapse-mcp:mcp_flow_tool'
+        ) continue;
 
         const safeName = (flow.name || id).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
         const toolName = `flow_${safeName}`;
@@ -130,11 +167,27 @@ class HomeyMcpApp extends Homey.App {
           async (args) => {
             const card = this._triggerCard;
             if (!card) throw new Error('Trigger card not available');
+
+            // Unique ID so the "Return response" action card resolves exactly this call
+            const requestId = `${id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+            const responsePromise = new Promise((resolve) => {
+              this._pendingResponses.set(requestId, resolve);
+              // Fall back after timeout when no "Return response" action card is used
+              setTimeout(() => {
+                if (this._pendingResponses.has(requestId)) {
+                  this._pendingResponses.delete(requestId);
+                  resolve(`Flow "${flowName}" triggered successfully`);
+                }
+              }, FLOW_RESPONSE_TIMEOUT_MS);
+            });
+
             await card.trigger(
               { tool_name: toolName, tool_input: args.input || '' },
-              { flow_id: id },
+              { flow_id: id, request_id: requestId, tool_name: toolName },
             );
-            return `Flow "${flowName}" triggered successfully`;
+
+            return await responsePromise;
           },
         );
         count++;
@@ -175,7 +228,6 @@ class HomeyMcpApp extends Homey.App {
     }
 
     const mcpUrl = this.homey.settings.get('mcp_url') || '';
-    // Extract the hostname from the stored mcp_url so the settings page can auto-fill the IP
     let localIp = this.homey.settings.get('local_address') || '';
     if (!localIp && mcpUrl) {
       try { localIp = new URL(mcpUrl).hostname; } catch (_) {}
@@ -199,11 +251,9 @@ class HomeyMcpApp extends Homey.App {
     if (local_address !== undefined) { this.homey.settings.set('local_address', local_address || ''); needsRestart = true; }
     if (personal_access_token !== undefined) {
       this.homey.settings.set('personal_access_token', personal_access_token || '');
-      // PAT takes effect on next app restart
     }
     if (api_key !== undefined) {
       this.homey.settings.set('api_key', api_key || '');
-      // API key takes effect immediately via the getApiKey callback
     }
     if (needsRestart) {
       await this._stopServer();

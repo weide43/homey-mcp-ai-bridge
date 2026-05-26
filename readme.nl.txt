@@ -1,4 +1,4 @@
-Synapse MCP verbindt elke AI-agent (Claude, Cursor, Windsurf, GPT-4...) met je Homey Pro via het Model Context Protocol (MCP). Geef opdrachten in gewone taal en laat de AI je slimme huis bedienen — zonder programmeren.
+MCP AI Bridge verbindt elke AI-agent (Claude, Cursor, Windsurf, GPT-4...) met je Homey Pro via het Model Context Protocol (MCP). Geef opdrachten in gewone taal en laat de AI je slimme huis bedienen — zonder programmeren.
 
 ---
 
@@ -32,7 +32,7 @@ Audio (2): systeemvolume lezen/instellen
 Systeem (6): info, geheugen, opslag, hernoemen, herstarten
 Spraak & LED (2): tekst-naar-spraak, LED-ring animeren
 
-Plus: eigen tools via je Homey flows (zie Flow Tools hieronder)
+Plus: eigen tools gebouwd vanuit Homey flows (zie hieronder)
 
 ---
 
@@ -65,25 +65,31 @@ Cursor / Windsurf — voeg toe aan mcp.json:
 
 ---
 
-API-SLEUTEL BEVEILIGING (optioneel)
+EIGEN AI-TOOLS VIA FLOW CARDS
 
-Beveilig toegang tot je MCP-server met een API-sleutel. Stel deze in via de app-instellingen.
-AI-clients sturen de sleutel mee via: Authorization: Bearer <sleutel>
+MCP AI Bridge voegt drie flow-cards toe waarmee je eigen AI-tools bouwt in de Homey flow-editor:
 
-Zonder API-sleutel vertrouwt de server je lokale netwerk (standaard).
+ALS (trigger): "AI-agent roept tool [toolnaam] aan"
+               Wordt geactiveerd wanneer je AI-agent een aangepaste tool aanroept.
+               Beschikbare tokens: tool_name, tool_input
 
----
+EN (conditie): "De toolnaam is / is niet [naam]"
+               Filter op toolnaam om te bepalen welke tak van de flow loopt.
+               Handig als één flow meerdere tools afhandelt.
 
-FLOW TOOLS (maak eigen AI-tools via flows)
+DAN (actie):   "Stuur [antwoord] terug naar de AI-agent"
+               Geeft een echt tekstantwoord terug aan de AI.
+               Ondersteunt flow-tokens: gebruik {{tool_input}}, apparaatwaarden, etc.
 
-Je kunt elke Homey flow beschikbaar maken als AI-tool:
+VOORBEELDFLOW:
+  ALS: AI-agent roept een aangepaste tool aan
+  EN:  Toolnaam is "get_weather"
+  DAN: [weersactie uitvoeren]
+  DAN: Stuur "De temperatuur is {{temperature}} graden" terug naar de AI-agent
 
-1. Maak een flow aan in Homey
-2. Gebruik de triggerkaart "AI-agent roept een aangepaste tool aan" als trigger
-3. Herstart de Synapse MCP-app
-4. De flow verschijnt als MCP-tool die je AI kan aanroepen
+De AI wacht tot 10 seconden op een antwoord. Zonder "Stuur antwoord terug"-kaart krijgt de AI een standaardbericht "flow triggered successfully".
 
-De AI ontvangt een bevestiging wanneer de flow getriggerd wordt. Gebruik actikaarten in de flow voor alles: notificaties versturen, apparaten bedienen, scripts starten, of andere flows starten.
+Na het aanmaken van een flow met de ALS-triggerkaart: herstart MCP AI Bridge. De flow verschijnt automatisch als MCP-tool met de naam flow_[flownaam].
 
 ---
 
@@ -92,8 +98,19 @@ OPENAPI-SPEC EN REST-SNELKOPPELINGEN
 Elke tool is ook beschikbaar als gewone REST-aanroep:
   GET  http://[homey-ip]:52199/openapi.json   — volledige OpenAPI 3.1-spec
   POST http://[homey-ip]:52199/tools/{naam}   — roep elke tool direct aan
+  GET  http://[homey-ip]:52199/health         — serverstatus
+  GET  http://[homey-ip]:52199/info           — serverinfo en toollijst
 
-Zo kun je Synapse MCP integreren in elk HTTP-systeem, ook zonder MCP-client.
+Zo kun je MCP AI Bridge integreren in elk HTTP-systeem zonder MCP-client.
+
+---
+
+API-SLEUTEL BEVEILIGING (optioneel)
+
+Beveilig toegang tot je MCP-server met een API-sleutel. Stel in via de app-instellingen.
+AI-clients sturen mee via: Authorization: Bearer <sleutel>  of  X-API-Key: <sleutel>
+
+Zonder sleutel vertrouwt de server je lokale netwerk (standaard).
 
 ---
 
@@ -121,5 +138,4 @@ TECHNISCH
 Protocol: MCP 2025-03-26 (StreamableHTTP + JSON-RPC 2.0)
 Standaard poort: 52199 (aanpasbaar in instellingen)
 Authenticatie: optionele API-sleutel (Bearer of X-API-Key header)
-Extra endpoints: GET /openapi.json, POST /tools/:name, GET /health, GET /info
 Broncode: https://github.com/weide43/homey-mcp-server
