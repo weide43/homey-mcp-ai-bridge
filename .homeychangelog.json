@@ -1,4 +1,7 @@
 {
+  "1.3.0": {
+    "en": "Rebranded to Synapse MCP. Added: optional API key authentication for the MCP server, REST endpoint for any tool via POST /tools/:name, OpenAPI 3.1 spec at GET /openapi.json, and flow trigger card so Homey flows can be exposed as custom AI tools."
+  },
   "1.0.0": {
     "en": "Initial release — 83 tools to control Homey Pro from any AI agent via the Model Context Protocol. Devices, flows, advanced flows, zones, logic variables, alarms, energy, insights, notifications, apps, users and system management."
   },

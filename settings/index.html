@@ -94,6 +94,24 @@
   <div id="patStatus" style="display:none;margin-top:8px;font-size:13px;color:#2e7d32">✓ Token opgeslagen</div>
 </div>
 
+<!-- API Key -->
+<div class="card">
+  <div class="card-title">API Key <span style="font-weight:400;font-size:11px;color:#aaa;text-transform:none">(optional)</span></div>
+  <div style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.5">
+    Protect access to your MCP server with an API key. If set, every request must include it via <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code>.<br><br>
+    Leave blank for open access on your local network (default).
+  </div>
+  <div id="apiKeySavedBadge" style="display:none;margin-bottom:10px;padding:8px 12px;background:#e8f5e9;border-radius:8px;font-size:13px;color:#2e7d32;font-weight:500">API key is active &mdash; enter a new key to replace, or clear to remove</div>
+  <label>API Key</label>
+  <input type="password" id="apiKeyInput" placeholder="Enter or generate a key">
+  <div class="hint" style="margin-top:6px">Use any strong random string, or click Generate below</div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn-primary" id="apiKeyBtn" style="flex:1">Save key</button>
+    <button id="apiKeyGenBtn" style="padding:12px 16px;border:1.5px solid #5c35cc;border-radius:8px;background:white;color:#5c35cc;font-size:14px;font-weight:600;cursor:pointer">Generate</button>
+  </div>
+  <div id="apiKeyStatus" style="display:none;margin-top:8px;font-size:13px;color:#2e7d32"></div>
+</div>
+
 <!-- Wizard -->
 <div class="card">
   <div class="card-title">Verbinden met AI Agent</div>
@@ -275,7 +293,7 @@ function onHomeyReady(Homey) {
   }
 
   // 2. Try settings API (web interface)
-  fetch('/api/app/community.homey-mcp-server/settings', { credentials: 'include' })
+  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(s) {
       if (!s) return;
@@ -302,7 +320,7 @@ function onHomeyReady(Homey) {
   if (typeof Homey.get === 'function') {
     Homey.get('personal_access_token', function(e, v) { if (v) showPatSaved(); });
   }
-  fetch('/api/app/community.homey-mcp-server/settings', { credentials: 'include' })
+  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(s) { if (s && s.has_pat) showPatSaved(); })
     .catch(function() {});
@@ -363,7 +381,7 @@ function onHomeyReady(Homey) {
     LS.s('ip', ip); LS.s('port', port);
     update();
     // Also save port to Homey settings
-    fetch('/api/app/community.homey-mcp-server/settings', {
+    fetch('/api/app/community.synapse-mcp/settings', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ port: port, local_address: ip })
@@ -407,6 +425,70 @@ function onHomeyReady(Homey) {
   // Claude mode handled by setMode() via onclick
 
   document.getElementById('mergeJson').addEventListener('input', update);
+
+  // API Key
+  var _hasApiKey = false;
+  function showApiKeySaved() {
+    _hasApiKey = true;
+    document.getElementById('apiKeySavedBadge').style.display = 'block';
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyInput').placeholder = 'New key (leave empty to clear)';
+  }
+
+  if (typeof Homey.get === 'function') {
+    Homey.get('api_key', function(e, v) { if (v) showApiKeySaved(); });
+  }
+  fetch('/api/app/community.synapse-mcp/settings', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(s) { if (s && s.has_api_key) showApiKeySaved(); })
+    .catch(function() {});
+
+  document.getElementById('apiKeyGenBtn').addEventListener('click', function() {
+    var arr = new Uint8Array(24);
+    window.crypto.getRandomValues(arr);
+    var key = btoa(String.fromCharCode.apply(null, arr)).replace(/[+/=]/g, '').slice(0, 32);
+    document.getElementById('apiKeyInput').value = key;
+    document.getElementById('apiKeyInput').type = 'text';
+  });
+
+  document.getElementById('apiKeyBtn').addEventListener('click', function() {
+    var key = document.getElementById('apiKeyInput').value.trim();
+    var btn = document.getElementById('apiKeyBtn');
+    var st  = document.getElementById('apiKeyStatus');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    st.style.display = 'none';
+
+    var done = false;
+    function onApiKeyDone() {
+      if (done) return;
+      done = true;
+      btn.disabled = false;
+      btn.textContent = 'Save key';
+      if (key) {
+        st.textContent = 'API key saved';
+        st.style.color = '#2e7d32';
+        showApiKeySaved();
+      } else {
+        _hasApiKey = false;
+        document.getElementById('apiKeySavedBadge').style.display = 'none';
+        document.getElementById('apiKeyInput').placeholder = 'Enter or generate a key';
+        st.textContent = 'API key removed — server is now open';
+        st.style.color = '#999';
+      }
+      document.getElementById('apiKeyInput').type = 'password';
+      st.style.display = 'block';
+      setTimeout(function() { st.style.display = 'none'; }, 4000);
+    }
+
+    fetch('/api/app/community.synapse-mcp/settings', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key })
+    }).then(function() { onApiKeyDone(); }).catch(function() { onApiKeyDone(); });
+    setTimeout(onApiKeyDone, 3000);
+  });
 
   window.setMode = function(m) {
     _mode = m;
