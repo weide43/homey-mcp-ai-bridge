@@ -1,4 +1,4 @@
-Synapse MCP connects any AI agent (Claude, Cursor, Windsurf, GPT-4...) to your Homey Pro via the Model Context Protocol (MCP). Give commands in plain language and let AI control your smart home — no programming required.
+MCP AI Bridge connects any AI agent (Claude, Cursor, Windsurf, GPT-4...) to your Homey Pro via the Model Context Protocol (MCP). Give commands in plain language and let AI control your smart home — no programming required.
 
 ---
 
@@ -32,7 +32,7 @@ Audio (2): read/set system volume
 System (6): info, memory, storage, rename, reboot
 Speech & LED (2): text-to-speech, LED ring animation
 
-Plus: custom tools from your own Homey flows (see Flow Tools below)
+Plus: your own custom tools built from Homey flows (see below)
 
 ---
 
@@ -65,25 +65,31 @@ Cursor / Windsurf — add to mcp.json:
 
 ---
 
-API KEY AUTHENTICATION (optional)
+CUSTOM AI TOOLS VIA FLOW CARDS
 
-Protect access to your MCP server with an API key. Set one in the app settings.
-AI clients then include it via: Authorization: Bearer <key>
+MCP AI Bridge adds three flow cards so you can build your own AI tools entirely in the Homey flow editor:
 
-Without an API key, the server trusts your local network (default).
+ALS (When):   "AI agent calls tool [tool_name]"
+              Fires when your AI agent calls a custom tool.
+              Tokens available: tool_name, tool_input
 
----
+EN (And):     "The tool name is / is not [name]"
+              Filter which tool name triggers this branch.
+              Useful when one flow handles multiple tools.
 
-FLOW TOOLS (create your own AI tools via flows)
+DAN (Then):   "Return [response] to the AI agent"
+              Sends a real text response back to the AI.
+              Supports flow tokens — use {{tool_input}}, device values, etc.
 
-You can expose any Homey flow as a custom AI tool:
+EXAMPLE FLOW:
+  ALS: AI agent calls a custom tool
+  EN:  Tool name is "get_weather"
+  DAN: [call a weather action card]
+  DAN: Return "The temperature is {{temperature}} degrees" to the AI agent
 
-1. Create a flow in Homey
-2. Use the trigger card "AI agent calls a custom tool" as the trigger
-3. Restart the Synapse MCP app
-4. The flow now appears as an MCP tool your AI can call
+The AI waits up to 10 seconds for a response. If no "Return response" card is used, it gets a default "triggered successfully" message.
 
-The AI receives a confirmation when the flow is triggered. Use action cards in the flow to do anything: send notifications, control devices, run scripts, or chain other flows.
+After creating a flow with the ALS trigger card, restart MCP AI Bridge — the flow appears automatically as an MCP tool named flow_[flowname].
 
 ---
 
@@ -92,8 +98,19 @@ OPENAPI SPEC AND REST SHORTCUTS
 Every tool is also accessible as a plain REST endpoint:
   GET  http://[homey-ip]:52199/openapi.json   — full OpenAPI 3.1 spec
   POST http://[homey-ip]:52199/tools/{name}   — call any tool directly
+  GET  http://[homey-ip]:52199/health         — server health check
+  GET  http://[homey-ip]:52199/info           — server info and tool list
 
-This lets you integrate Synapse MCP into any HTTP-capable system, even without an MCP client.
+This lets you integrate MCP AI Bridge into any HTTP-capable system without an MCP client.
+
+---
+
+API KEY AUTHENTICATION (optional)
+
+Protect access to your MCP server with an API key. Set one in the app settings.
+AI clients include it via: Authorization: Bearer <key>  or  X-API-Key: <key>
+
+Without a key, the server trusts your local network (default).
 
 ---
 
@@ -116,23 +133,9 @@ REQUIREMENTS
 
 ---
 
-WHY SYNAPSE MCP?
-
-Synapse MCP implements the open Model Context Protocol (MCP) standard:
-
-- Works with any MCP-compatible AI client: Claude Desktop, Claude Code, Cursor, Windsurf, Copilot Studio, and more
-- 83+ granular tools giving full programmatic access to the Homey API, including advanced flow creation, app settings, insights data, energy monitoring, and system controls
-- Extend with your own tools: any Homey flow becomes an AI tool via the flow trigger card
-- Optional API key protection for secure remote access
-- Full OpenAPI 3.1 spec and REST shortcuts for non-MCP integrations
-- Runs entirely on your local network — no cloud dependency, no subscription
-- Open-source: https://github.com/weide43/homey-mcp-server
-
----
-
 TECHNICAL
 
 Protocol: MCP 2025-03-26 (StreamableHTTP + JSON-RPC 2.0)
 Default port: 52199 (configurable in settings)
 Authentication: optional API key (Bearer or X-API-Key header)
-Extra endpoints: GET /openapi.json, POST /tools/:name, GET /health, GET /info
+Open-source: https://github.com/weide43/homey-mcp-server
